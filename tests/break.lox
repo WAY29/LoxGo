@@ -1,0 +1,15 @@
+var a = 0;
+
+for (a = 1;a < 1000; a = a + 1) {
+    print a;
+    break;
+}
+
+for (var b = 1;b <= 10; b = b + 1) {
+    for (;;) {
+        print b;
+        break;
+    }
+}
+
+break;

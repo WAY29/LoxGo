@@ -1,0 +1,9 @@
+var a = 2;
+var b = 3;
+if (a > 3) {
+    print a;
+} else if (a + b > 3) {
+    print a+b;
+} else {
+    print "nonono";
+}

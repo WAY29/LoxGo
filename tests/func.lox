@@ -1,0 +1,42 @@
+fun add(a, b, c) {
+  print a + b + c;
+}
+
+fun sayHi(first, last) {
+  print "Hi, " + first + " " + last + "!";
+}
+
+fun count(n) {
+  while (n < 100) {
+    n = n + 1;
+    return n;
+  }
+}
+
+fun B(n) {
+    return n;
+}
+
+fun A(n) {
+    return B(n);
+}
+
+fun self(n) {
+    return self(n);
+}
+
+
+sayHi("Dear", "Reader");
+add(1, 2, 3);
+var a = count(2);
+
+print count(1);
+print a;
+print A(1);
+print clock();
+
+print sayHi;
+print add;
+print clock;
+
+print self(0);

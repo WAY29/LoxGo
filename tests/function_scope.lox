@@ -1,0 +1,8 @@
+fun scope(a) {
+	var a = "local";
+    print a;
+}
+
+var a = "global";
+scope(a);
+print a;
