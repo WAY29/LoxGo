@@ -48,7 +48,7 @@ func (lox *Lox) RunPrompt() {
 		}
 		line = scanner.Text()
 		// 末尾补充分号
-		if !strings.HasSuffix(line, ";") {
+		if !strings.HasSuffix(line, ";") && len(line) > 0 {
 			line += ";"
 		}
 
