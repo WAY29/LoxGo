@@ -1,0 +1,31 @@
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
+
+var b = "global";
+{
+    var b = "in block1";
+    fun showB() {
+       print b;
+    }
+
+    showB();
+}
+
+{
+    // Parse error in line 24: Error at 'a': Already variable with this name in this scope.
+    // var a = "first";
+    // var a = "second";
+}
+
+{
+ // Parse error in line 29: Error at 'return': Can't return from top-level code.
+ // return "at top level";
+}

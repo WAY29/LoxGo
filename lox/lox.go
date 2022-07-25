@@ -10,6 +10,7 @@ import (
 	"github.com/WAY29/LoxGo/interpreter"
 	"github.com/WAY29/LoxGo/lexer"
 	"github.com/WAY29/LoxGo/parser"
+	"github.com/WAY29/LoxGo/resolver"
 )
 
 type Lox struct {
@@ -93,6 +94,8 @@ func (lox *Lox) Eval(r io.Reader) []interface{} {
 	if statements == nil {
 		return nil
 	}
+	resolver := resolver.NewResolver(lox.interpreter)
+	resolver.ResolveStmts(statements)
 
 	results := lox.interpreter.Interpret(statements)
 	return results

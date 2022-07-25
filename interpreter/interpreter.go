@@ -16,8 +16,10 @@ var (
 type Interpreter struct { // impl ExprVisitor, StmtVisitor
 	globals     *Environment
 	environment *Environment
-	block       *parser.Block
-	while       *parser.While
+	locals      map[parser.Expr]int
+
+	block *parser.Block
+	while *parser.While
 
 	stack     *Stack
 	stackSize uint64
@@ -28,6 +30,7 @@ func NewInterpreter() *Interpreter {
 	return &Interpreter{
 		globals:     globals,
 		environment: globals,
+		locals:      make(map[parser.Expr]int),
 		block:       nil,
 		stack:       NewStack(nil, nil, nil),
 	}
@@ -132,6 +135,21 @@ func (i *Interpreter) executeBlock(block *parser.Block, environment *Environment
 	}
 
 	return nil, nil
+}
+
+func (i *Interpreter) Resolve(expr parser.Expr, depth int) {
+	// fmt.Printf("debug: set %#v: %d\n", expr, depth)
+	i.locals[expr] = depth
+}
+
+func (i *Interpreter) lookUpVariable(name *lexer.Token, expr parser.Expr) (interface{}, error) {
+	// fmt.Printf("debug: lookup expr: %p locals:%#v\n", expr, i.locals)
+	if distance, ok := i.locals[expr]; !ok {
+		return i.globals.get(name.GetValue()), nil
+	} else {
+		// fmt.Printf("debug: find in %d distance scope: %s\n", distance, name.GetValue())
+		return i.environment.getAt(distance, name.GetValue()), nil
+	}
 }
 
 func (i *Interpreter) VisitLiteralExpr(expr *parser.Literal) (interface{}, error) {
@@ -402,7 +420,7 @@ func (i *Interpreter) VisitCallExpr(expr *parser.Call) (result interface{}, err 
 }
 
 func (i *Interpreter) VisitVariableExpr(expr *parser.Variable) (interface{}, error) {
-	return i.environment.get(expr.Name.GetValue()), nil
+	return i.lookUpVariable(expr.Name, expr)
 }
 
 func (i *Interpreter) VisitTernaryExpr(expr *parser.Ternary) (interface{}, error) {
@@ -425,12 +443,17 @@ func (i *Interpreter) VisitTernaryExpr(expr *parser.Ternary) (interface{}, error
 }
 
 func (i *Interpreter) VisitAssignExpr(expr *parser.Assign) (interface{}, error) {
-	result, err := i.evaluate(expr.Value)
+	value, err := i.evaluate(expr.Value)
 	if err != nil {
 		return nil, err
 	}
-	i.environment.assign(expr.Name.GetValue(), result)
-	return result, nil
+	if distance, ok := i.locals[expr]; !ok {
+		i.globals.assign(expr.Name.GetValue(), value)
+	} else {
+		i.environment.assignAt(distance, expr.Name, expr)
+	}
+
+	return value, nil
 }
 
 func (i *Interpreter) VisitLambdaExpr(expr *parser.Lambda) (interface{}, error) {
@@ -446,7 +469,7 @@ func (i *Interpreter) VisitExpressionStmt(stmt *parser.Expression) (interface{},
 }
 
 func (i *Interpreter) VisitFunctionStmt(stmt *parser.Function) (interface{}, error) {
-	i.environment.define(stmt.Name.GetValue(), NewLoxCustomFunc(stmt, i.environment))
+	i.environment.define(stmt.Name.GetValue(), NewLoxCustomFunc(stmt, NewEnvironment(i.environment)))
 	return nil, nil
 }
 
@@ -485,7 +508,7 @@ func (i *Interpreter) VisitReturnStmt(stmt *parser.Return) (interface{}, error) 
 
 	recursiveBlockStop(i.block)
 	recursiveWhileStop(i.while)
-	value, err := i.evaluate(stmt.Initializer)
+	value, err := i.evaluate(stmt.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -566,6 +589,6 @@ func (i *Interpreter) VisitVarStmt(stmt *parser.Var) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitBlockStmt(stmt *parser.Block) (interface{}, error) {
-	result, err := i.executeBlock(stmt, i.environment)
+	result, err := i.executeBlock(stmt, NewEnvironment(i.environment))
 	return result, err
 }

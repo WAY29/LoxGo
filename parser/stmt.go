@@ -70,12 +70,12 @@ func (n *Print) Accept(v StmtVisitor) (interface{}, error) {
 }
 
 type Return struct {
-	Keyword     *lexer.Token
-	Initializer Expr
+	Keyword *lexer.Token
+	Value   Expr
 }
 
-func NewReturn(keyword *lexer.Token, initializer Expr) *Return {
-	return &Return{Keyword: keyword, Initializer: initializer}
+func NewReturn(keyword *lexer.Token, value Expr) *Return {
+	return &Return{Keyword: keyword, Value: value}
 }
 func (n *Return) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitReturnStmt(n)

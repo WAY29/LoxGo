@@ -42,7 +42,7 @@ func main() {
 		"Function   : Name *lexer.Token, Params []*lexer.Token, Body Stmt",
 		"If         : Condition Expr, ThenBranch Stmt, ElseBranch Stmt",
 		"Print      : Expr Expr",
-		"Return     : Keyword *lexer.Token, Initializer Expr",
+		"Return     : Keyword *lexer.Token, Value Expr",
 		"Var        : Names []*lexer.Token, Initializers []Expr",
 		"While      : Condition Expr, Body Stmt, Stop bool, Parent *While",
 		"Break      : Parent Stmt, Block Stmt, Token *lexer.Token",

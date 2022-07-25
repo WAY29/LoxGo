@@ -1,6 +1,11 @@
 package interpreter
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/WAY29/LoxGo/lexer"
+	"github.com/WAY29/LoxGo/parser"
+)
 
 type Environment struct {
 	enclosing *Environment
@@ -23,6 +28,24 @@ func (e *Environment) get(name string) interface{} {
 	}
 	if e.enclosing != nil {
 		return e.enclosing.get(name)
+	}
+	panic(NewRuntimeError("Undefined variable '%s'.", name))
+}
+func (e *Environment) ancestor(distance int) *Environment {
+	var environ *Environment = e
+	for i := 0; i < distance; i++ {
+		environ = environ.enclosing
+	}
+	return environ
+}
+
+func (e *Environment) getAt(distance int, name string) interface{} {
+	environ := e.ancestor(distance)
+	if v, ok := environ.values[name]; ok {
+		if v.Value == nil {
+			panic(NewRuntimeError("Access empty variable '%s'.", name))
+		}
+		return v.Value
 	}
 	panic(NewRuntimeError("Undefined variable '%s'.", name))
 }
@@ -66,5 +89,8 @@ func (e *Environment) assign(name string, value interface{}) {
 		e.enclosing.assign(name, value)
 		return
 	}
-	panic(NewRuntimeError("Undefined variable '%s'.", name))
+}
+
+func (e *Environment) assignAt(distance int, name *lexer.Token, value parser.Expr) {
+	e.ancestor(distance).set(name.GetValue(), value)
 }
