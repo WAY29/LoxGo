@@ -12,11 +12,11 @@ var a = "global";
 var b = "global";
 {
     var b = "in block1";
-    fun showB() {
+    fun showB(b) {
        print b;
     }
 
-    showB();
+    showB("arg");
 }
 
 {

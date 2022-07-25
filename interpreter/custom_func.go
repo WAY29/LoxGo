@@ -25,10 +25,11 @@ func NewLoxCustomFunc(declaration *parser.Function, closure *Environment) *LoxCu
 }
 
 func (f *LoxCustomFunc) call(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
-	environ := NewEnvironment(f.closure)
 	for i, param := range f.declaration.Params {
-		environ.define(param.GetValue(), arguments[i])
+		f.closure.define(param.GetValue(), arguments[i])
 	}
+
+	environ := NewEnvironment(f.closure)
 	if block, ok := f.declaration.Body.(*parser.Block); !ok {
 		return nil, NewRuntimeError("Func %s body invalid.", f.declaration.Name.GetValue())
 	} else {
