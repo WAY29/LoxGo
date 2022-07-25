@@ -27,6 +27,12 @@
     - [x] 匿名函数 `demo(func(a) {statments...}, 0)`
   - [ ] 类相关
 
+- 使用
+```bash
+go run main.go # 进入交互模式
+go run main.go ./tests/if.lox # 运行文件
+```
+
 # 参考
 - [crafting interpreters](https://craftinginterpreters.com/contents.html)
 - [crafting interpreters zh](https://github.com/GuoYaxiang/craftinginterpreters_zh)
