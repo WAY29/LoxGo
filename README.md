@@ -24,7 +24,7 @@
     - [x] 函数调用 `demo(1, 2);`
     - [x] (*) return语句 `return a+b;` (并非使用异常来处理返回值)
     - [x] 闭包
-    - [x] 匿名函数 `demo(func(a) {statments...}, 0)`
+    - [x] (*) 匿名函数 `demo(func(a) {statments...}, 0)`
   - [ ] 类相关
 
 - 使用
