@@ -14,6 +14,12 @@ func NewRuntimeError(format string, a ...interface{}) *RuntimeError {
 	}
 }
 
+func NewTypeConvertError(value interface{}, _type string) *RuntimeError {
+	return &RuntimeError{
+		Msg: "Runtime Error: Type conversion error: " + fmt.Sprintf("can't convert %v[%T] to %s", value, value, _type),
+	}
+}
+
 func (e *RuntimeError) Error() string {
 	return e.Msg
 }

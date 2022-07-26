@@ -143,7 +143,7 @@ func (i *Interpreter) Resolve(expr parser.Expr, depth int) {
 }
 
 func (i *Interpreter) lookUpVariable(name *lexer.Token, expr parser.Expr) (interface{}, error) {
-	// fmt.Printf("debug: lookup expr: %p locals:%#v\n", expr, i.locals)
+	// fmt.Printf("debug: lookup expr: %#v locals:%#v\n", expr, i.locals)
 	if distance, ok := i.locals[expr]; !ok {
 		return i.globals.get(name.GetValue()), nil
 	} else {
@@ -415,7 +415,11 @@ func (i *Interpreter) VisitCallExpr(expr *parser.Call) (result interface{}, err 
 			}
 			arguments[n] = v
 		}
-		return calleeFunc.call(i, arguments)
+		result, err = calleeFunc.call(i, arguments)
+		if err != nil {
+			panic(NewRuntimeError("%v", err))
+		}
+		return
 	}
 }
 
@@ -469,6 +473,7 @@ func (i *Interpreter) VisitExpressionStmt(stmt *parser.Expression) (interface{},
 }
 
 func (i *Interpreter) VisitFunctionStmt(stmt *parser.Function) (interface{}, error) {
+	// fmt.Printf("debug: set function: %s\n", stmt.Name.GetValue())
 	i.environment.define(stmt.Name.GetValue(), NewLoxCustomFunc(stmt, NewEnvironment(i.environment)))
 	return nil, nil
 }
@@ -502,9 +507,9 @@ func (i *Interpreter) VisitPrintStmt(stmt *parser.Print) (interface{}, error) {
 }
 
 func (i *Interpreter) VisitReturnStmt(stmt *parser.Return) (interface{}, error) {
-	if i.block == nil {
-		return nil, NewRuntimeError("Invalid return usage in line %d.", stmt.Keyword.GetLine())
-	}
+	// if i.block == nil {
+	// 	return nil, NewRuntimeError("Invalid return usage in line %d.", stmt.Keyword.GetLine())
+	// }
 
 	recursiveBlockStop(i.block)
 	recursiveWhileStop(i.while)

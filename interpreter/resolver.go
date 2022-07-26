@@ -1,21 +1,20 @@
-package resolver
+package interpreter
 
 import (
 	"container/list"
 
-	"github.com/WAY29/LoxGo/interpreter"
 	"github.com/WAY29/LoxGo/lexer"
 	"github.com/WAY29/LoxGo/parser"
 )
 
 type Resolver struct { // impl ExprVisitor, StmtVisitor
-	interpreter *interpreter.Interpreter
+	interpreter *Interpreter
 	scopes      *list.List
 
 	inFunction bool
 }
 
-func NewResolver(i *interpreter.Interpreter) *Resolver {
+func NewResolver(i *Interpreter) *Resolver {
 	return &Resolver{
 		interpreter: i,
 		scopes:      list.New(),
@@ -51,7 +50,7 @@ func (r *Resolver) resolveLocal(expr parser.Expr, name *lexer.Token) {
 	for i := r.scopes.Back(); i != nil && n >= 0; i = i.Prev() {
 		scope := i.Value.(map[string]bool)
 		if _, ok := scope[name.GetValue()]; ok {
-			// fmt.Printf("debug: resolve: %#v %d\n", expr, r.scopes.Len()-1-n)
+			// fmt.Printf("debug: resolve: %s %#v %d\n", name.GetValue(), expr, r.scopes.Len()-1-n)
 			r.interpreter.Resolve(expr, r.scopes.Len()-1-n)
 			return
 		}
@@ -89,19 +88,19 @@ func (r *Resolver) decleare(name *lexer.Token) {
 	if r.scopes.Len() == 0 {
 		return
 	}
-	scope := r.scopes.Back().Value.(map[string]bool)
-	if _, ok := scope[name.GetValue()]; ok {
+	scopeMap := r.scopes.Back().Value.(map[string]bool)
+	if _, ok := scopeMap[name.GetValue()]; ok {
 		panic(parser.NewParseError(name, "Already variable with this name in this scope."))
 	}
-	scope[name.GetValue()] = false
+	scopeMap[name.GetValue()] = false
 }
 
 func (r *Resolver) define(name *lexer.Token) {
 	if r.scopes.Len() == 0 {
 		return
 	}
-	scope := r.scopes.Back().Value.(map[string]bool)
-	scope[name.GetValue()] = true
+	scopeMap := r.scopes.Back().Value.(map[string]bool)
+	scopeMap[name.GetValue()] = true
 }
 
 func (r *Resolver) VisitTernaryExpr(expr *parser.Ternary) (interface{}, error) {
@@ -125,6 +124,7 @@ func (r *Resolver) VisitBinaryExpr(expr *parser.Binary) (interface{}, error) {
 
 func (r *Resolver) VisitCallExpr(expr *parser.Call) (interface{}, error) {
 	r.resolveExpr(expr.Callee)
+
 	for _, arg := range expr.Arguments {
 		r.resolveExpr(arg)
 	}
@@ -153,8 +153,12 @@ func (r *Resolver) VisitUnaryExpr(expr *parser.Unary) (interface{}, error) {
 }
 
 func (r *Resolver) VisitVariableExpr(expr *parser.Variable) (interface{}, error) {
-	if v, ok := r.scopes.Back().Value.(map[string]bool)[expr.Name.GetValue()]; ok && r.scopes.Len() > 0 && !v {
-		panic(interpreter.NewRuntimeError("Can't read local variable in its own initializer."))
+	scope := r.scopes.Back()
+	if scope == nil {
+		return nil, nil
+	}
+	if v, ok := scope.Value.(map[string]bool)[expr.Name.GetValue()]; ok && r.scopes.Len() > 0 && !v {
+		panic(NewRuntimeError("Can't read local variable in its own initializer."))
 	}
 	r.resolveLocal(expr, expr.Name)
 	return nil, nil
