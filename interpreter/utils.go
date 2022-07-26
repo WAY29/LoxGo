@@ -21,6 +21,8 @@ func interfaceToFloat64(a interface{}) (float64, bool) {
 		return v, ok
 	} else if v, ok := a.(int); ok {
 		return float64(v), ok
+	} else if v, ok := a.(int64); ok {
+		return float64(v), ok
 	}
 	return 0, false
 }

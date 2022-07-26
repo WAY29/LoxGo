@@ -25,6 +25,8 @@ func _int(interpreter *Interpreter, arguments []interface{}) (interface{}, error
 		} else {
 			return 0, nil
 		}
+	case int64:
+		return v, nil
 	case int:
 		return v, nil
 	}
@@ -36,6 +38,8 @@ func _float(interpreter *Interpreter, arguments []interface{}) (interface{}, err
 	switch v := value.(type) {
 	case string:
 		return strconv.ParseFloat(v, 64)
+	case int64:
+		return float64(v), nil
 	case int:
 		return float64(v), nil
 	case float32:

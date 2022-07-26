@@ -7,33 +7,34 @@ import (
 )
 
 type LoxCustomFunc struct { // Impl LoxCallable
-	closure     *Environment
-	declaration *parser.Function
-	name        string
+	parentEnvironment *Environment
+	declaration       *parser.Function
+	name              string
 }
 
-func NewLoxCustomFunc(declaration *parser.Function, closure *Environment) *LoxCustomFunc {
+func NewLoxCustomFunc(declaration *parser.Function, parentEnviron *Environment) *LoxCustomFunc {
 	var funcName string
 	if declaration.Name != nil {
 		funcName = declaration.Name.GetValue()
 	}
 	return &LoxCustomFunc{
-		closure:     closure,
-		declaration: declaration,
-		name:        funcName,
+		parentEnvironment: parentEnviron,
+		declaration:       declaration,
+		name:              funcName,
 	}
 }
 
 func (f *LoxCustomFunc) call(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	environ := NewEnvironment(f.parentEnvironment)
 	for i, param := range f.declaration.Params {
-		f.closure.define(param.GetValue(), arguments[i])
+		environ.define(param.GetValue(), arguments[i])
 	}
 
-	environ := NewEnvironment(f.closure)
+	closure := NewEnvironment(environ)
 	if block, ok := f.declaration.Body.(*parser.Block); !ok {
 		return nil, NewRuntimeError("Func %s body invalid.", f.declaration.Name.GetValue())
 	} else {
-		result, err := interpreter.executeBlock(block, environ)
+		result, err := interpreter.executeBlock(block, closure)
 		return result, err
 	}
 }
