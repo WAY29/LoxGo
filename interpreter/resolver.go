@@ -132,6 +132,27 @@ func (r *Resolver) VisitCallExpr(expr *parser.Call) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitArrayExpr(expr *parser.Array) (interface{}, error) {
+	for _, element := range expr.Elements {
+		r.resolveExpr(element)
+	}
+	return nil, nil
+}
+
+func (r *Resolver) VisitIndexExpr(expr *parser.Index) (interface{}, error) {
+	r.resolveExpr(expr.Index)
+
+	scope := r.scopes.Back()
+	if scope == nil {
+		return nil, nil
+	}
+	if v, ok := scope.Value.(map[string]bool)[expr.Name.GetValue()]; ok && r.scopes.Len() > 0 && !v {
+		panic(NewRuntimeError("Can't read local variable in its own initializer."))
+	}
+	r.resolveLocal(expr, expr.Name)
+	return nil, nil
+}
+
 func (r *Resolver) VisitGroupingExpr(expr *parser.Grouping) (interface{}, error) {
 	r.resolveExpr(expr.Expression)
 	return nil, nil

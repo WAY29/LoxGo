@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"math"
 	"reflect"
 
 	"github.com/WAY29/LoxGo/parser"
@@ -17,13 +18,33 @@ func isEqual(a, b interface{}) bool {
 }
 
 func interfaceToFloat64(a interface{}) (float64, bool) {
-	if v, ok := a.(float64); ok {
-		return v, ok
-	} else if v, ok := a.(int); ok {
-		return float64(v), ok
-	} else if v, ok := a.(int64); ok {
-		return float64(v), ok
+	switch v := a.(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
 	}
+
+	return 0, false
+}
+
+func float642Int(v float64) (int, bool) {
+	if v == math.Trunc(v) {
+		return int(v), true
+	}
+	return 0, false
+}
+
+func interfaceToInt(a interface{}) (int, bool) {
+	switch v := a.(type) {
+	case int:
+		return v, true
+	case int64:
+		return int(v), true
+	}
+
 	return 0, false
 }
 

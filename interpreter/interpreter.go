@@ -183,8 +183,9 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 	// 强制整数转换
 	defer func() {
 		if err == nil {
-			if v, ok := result.(float64); ok && v == math.Trunc(v) {
-				result = int(v)
+			if v, ok := result.(float64); !ok {
+			} else if v2, ok := float642Int(v); ok {
+				result = v2
 			}
 		}
 	}()
@@ -194,6 +195,7 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 		ve    *parser.Variable
 		vi    interface{}
 		v     float64
+		v2    int
 		isVar bool = false
 	)
 
@@ -225,10 +227,15 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 				vi = right
 			}
 			if v, ok = interfaceToFloat64(vi); ok {
-				if isVar {
-					i.environment.assign(ve.Name.GetValue(), v+1)
+				if v, ok = interfaceToFloat64(vi); ok {
+					if v2, ok = float642Int(v + 1); ok {
+						vi = v2
+					}
+					if isVar {
+						i.environment.assign(ve.Name.GetValue(), vi)
+					}
+					return vi, nil
 				}
-				return v + 1, nil
 			}
 			return nil, NewConvertError(vi, "float", "")
 		case lexer.MINUSMINUS:
@@ -240,10 +247,13 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 				vi = right
 			}
 			if v, ok = interfaceToFloat64(vi); ok {
-				if isVar {
-					i.environment.assign(ve.Name.GetValue(), v-1)
+				if v2, ok = float642Int(v - 1); ok {
+					vi = v2
 				}
-				return v - 1, nil
+				if isVar {
+					i.environment.assign(ve.Name.GetValue(), vi)
+				}
+				return vi, nil
 			}
 			return nil, NewConvertError(vi, "float", "")
 		}
@@ -258,8 +268,11 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 				vi = right
 			}
 			if v, ok = interfaceToFloat64(vi); ok {
+				if v2, ok = float642Int(v + 1); ok {
+					vi = v2
+				}
 				if isVar {
-					i.environment.assign(ve.Name.GetValue(), v+1)
+					i.environment.assign(ve.Name.GetValue(), vi)
 				}
 				return v, nil
 			}
@@ -273,8 +286,11 @@ func (i *Interpreter) VisitUnaryExpr(expr *parser.Unary) (result interface{}, er
 				vi = right
 			}
 			if v, ok = interfaceToFloat64(vi); ok {
+				if v2, ok = float642Int(v - 1); ok {
+					vi = v2
+				}
 				if isVar {
-					i.environment.assign(ve.Name.GetValue(), v-1)
+					i.environment.assign(ve.Name.GetValue(), vi)
 				}
 				return v, nil
 			}
@@ -404,7 +420,7 @@ func (i *Interpreter) VisitCallExpr(expr *parser.Call) (result interface{}, err 
 		defer i.newStackState(expr, calleeFunc)()
 
 		argsLen := len(expr.Arguments)
-		if calleeFunc.arity() != argsLen {
+		if calleeFunc.arity() != argsLen && calleeFunc.arity() != -1 {
 			return nil, NewRuntimeError("Excepted %d arguments but got %d.", calleeFunc.arity(), argsLen)
 		}
 		arguments := make([]interface{}, argsLen)
@@ -458,6 +474,51 @@ func (i *Interpreter) VisitAssignExpr(expr *parser.Assign) (interface{}, error) 
 	}
 
 	return value, nil
+}
+
+func (i *Interpreter) VisitArrayExpr(expr *parser.Array) (interface{}, error) {
+	var (
+		value interface{}
+		err   error
+	)
+	array := make([]interface{}, 0)
+	for _, element := range expr.Elements {
+		value, err = element.Accept(i)
+		if err != nil {
+			return nil, err
+		}
+		array = append(array, value)
+	}
+	return array, nil
+}
+
+func (i *Interpreter) VisitIndexExpr(expr *parser.Index) (interface{}, error) {
+	var (
+		identifier, indexInterface interface{}
+		array                      []interface{}
+		index                      int
+		ok                         bool
+		err                        error
+	)
+	identifier, err = i.lookUpVariable(expr.Name, expr)
+	if err != nil {
+		return nil, err
+	}
+	if array, ok = identifier.([]interface{}); ok {
+		indexInterface, err = expr.Index.Accept(i)
+		if err != nil {
+			return nil, err
+		}
+		if index, ok = interfaceToInt(indexInterface); !ok {
+			return nil, NewRuntimeError("Index must be int.")
+		}
+		if index > len(array)-1 {
+			return nil, NewRuntimeError("Array index out of range.")
+		}
+		return array[index], nil
+	} else {
+		return nil, NewRuntimeError("Can only index array.")
+	}
 }
 
 func (i *Interpreter) VisitLambdaExpr(expr *parser.Lambda) (interface{}, error) {

@@ -33,6 +33,8 @@ func main() {
 		"Logical  : Left Expr, Operator *lexer.Token, Right Expr",
 		"Unary    : Operator *lexer.Token, Right Expr, Prefix bool",
 		"Variable : Name *lexer.Token",
+		"Array    : Token *lexer.Token, Elements []Expr",
+		"Index    : Name *lexer.Token, Index Expr",
 		"Lambda   : Token *lexer.Token, Function Stmt",
 	})
 

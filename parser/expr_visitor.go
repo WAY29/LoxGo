@@ -12,5 +12,7 @@ type ExprVisitor interface {
 	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
 	VisitVariableExpr(expr *Variable) (interface{}, error)
+	VisitArrayExpr(expr *Array) (interface{}, error)
+	VisitIndexExpr(expr *Index) (interface{}, error)
 	VisitLambdaExpr(expr *Lambda) (interface{}, error)
 }

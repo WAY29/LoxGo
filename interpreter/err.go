@@ -14,12 +14,6 @@ func NewRuntimeError(format string, a ...interface{}) *RuntimeError {
 	}
 }
 
-func NewTypeConvertError(value interface{}, _type string) *RuntimeError {
-	return &RuntimeError{
-		Msg: "Runtime Error: Type conversion error: " + fmt.Sprintf("can't convert %v[%T] to %s", value, value, _type),
-	}
-}
-
 func (e *RuntimeError) Error() string {
 	return e.Msg
 }
@@ -45,5 +39,5 @@ func (e *ConvertError) Error() string {
 	if e.value == nil {
 		return fmt.Sprintf("Runtime error: Convert Error: %s.", e.extraMsg)
 	}
-	return fmt.Sprintf("Runtime error: Convert error: can't convert %v to %s%s.", e.value, e.typeString, e.extraMsg)
+	return fmt.Sprintf("Runtime error: Convert error: can't convert %v[%T] to %s%s.", e.value, e.value, e.typeString, e.extraMsg)
 }

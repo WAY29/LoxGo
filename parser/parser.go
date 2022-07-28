@@ -35,7 +35,9 @@ unary          → ( "!" | "-" ) unary
 call           → primary ( "(" arguments? ")" )* ;
 arguments      → expression ( "," expression )* ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" | IDENTIFIER | lambda;
+               | IDENTIFIER ("[" expression "]")? | grouping | array | lambda;
+grouping       → "(" expression ")"
+array          → "[" expression ( "," expression )* "]";
 lambda         → "fun" "(" parameters? ")" block;
 */
 package parser
@@ -537,11 +539,30 @@ func (p *Parser) primary() Expr {
 	} else if p.match(lexer.NUMBER, lexer.STRING) {
 		return NewLiteral(p.previous().GetLiteral())
 	} else if p.match(lexer.IDENTIFIER) {
-		return NewVariable(p.previous())
+		token := p.previous()
+		if p.match(lexer.LEFT_BRACKET) {
+			index := p.expression()
+			p.consume(lexer.RIGHT_BRACKET, "Expect ']' after index.")
+			return NewIndex(token, index)
+		} else {
+			return NewVariable(token)
+		}
 	} else if p.match(lexer.LEFT_PAREN) {
 		expr := p.expression()
 		p.consume(lexer.RIGHT_PAREN, "Expect ')' after expression.")
 		return NewGrouping(expr)
+	} else if p.match(lexer.LEFT_BRACKET) {
+		elements := make([]Expr, 0)
+		if !p.check(lexer.RIGHT_BRACKET) {
+			for {
+				elements = append(elements, p.expression())
+				if !p.match(lexer.COMMA) {
+					break
+				}
+			}
+		}
+		p.consume(lexer.RIGHT_BRACKET, "Except ']' after array.")
+		return NewArray(p.previous(), elements)
 	} else if p.match(lexer.FUN) {
 		function := p.function("function", false)
 		return NewLambda(p.previous(), function)

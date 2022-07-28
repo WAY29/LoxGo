@@ -10,8 +10,12 @@ func _clock(interpreter *Interpreter, arguments []interface{}) (interface{}, err
 	return time.Now().Unix(), nil
 }
 
-func _string(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
-	return fmt.Sprintf("%v", arguments[0]), nil
+func _type(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	return fmt.Sprintf("%T", arguments[0]), nil
+}
+
+func _bool(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	return isTruthy(arguments[0]), nil
 }
 
 func _int(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
@@ -30,7 +34,7 @@ func _int(interpreter *Interpreter, arguments []interface{}) (interface{}, error
 	case int:
 		return v, nil
 	}
-	return nil, NewTypeConvertError(value, "int")
+	return nil, NewConvertError(value, "int", "")
 }
 
 func _float(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
@@ -47,15 +51,23 @@ func _float(interpreter *Interpreter, arguments []interface{}) (interface{}, err
 	case float64:
 		return value, nil
 	}
-	return nil, NewTypeConvertError(value, "float")
+	return nil, NewConvertError(value, "float", "")
 }
 
-func _bool(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
-	return isTruthy(arguments[0]), nil
+func _string(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	return fmt.Sprintf("%v", arguments[0]), nil
 }
 
-func _type(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
-	return fmt.Sprintf("%T", arguments[0]), nil
+func _array(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	return arguments, nil
+}
+
+func _len(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
+	if array, ok := arguments[0].([]interface{}); !ok {
+		return nil, NewRuntimeError("Can't get length of %s[%T]", arguments[0], arguments[0])
+	} else {
+		return len(array), nil
+	}
 }
 
 func NewBuiltinEnvironments() *Environment {
@@ -66,5 +78,7 @@ func NewBuiltinEnvironments() *Environment {
 	globals.define("float", NewLoxBuiltinFunc(_float, "float", 1))
 	globals.define("bool", NewLoxBuiltinFunc(_bool, "bool", 1))
 	globals.define("string", NewLoxBuiltinFunc(_string, "string", 1))
+	globals.define("array", NewLoxBuiltinFunc(_array, "array", -1))
+	globals.define("len", NewLoxBuiltinFunc(_len, "len", 1))
 	return globals
 }

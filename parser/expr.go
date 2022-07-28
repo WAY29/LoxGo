@@ -119,6 +119,30 @@ func (n *Variable) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitVariableExpr(n)
 }
 
+type Array struct {
+	Token    *lexer.Token
+	Elements []Expr
+}
+
+func NewArray(token *lexer.Token, elements []Expr) *Array {
+	return &Array{Token: token, Elements: elements}
+}
+func (n *Array) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitArrayExpr(n)
+}
+
+type Index struct {
+	Name  *lexer.Token
+	Index Expr
+}
+
+func NewIndex(name *lexer.Token, index Expr) *Index {
+	return &Index{Name: name, Index: index}
+}
+func (n *Index) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitIndexExpr(n)
+}
+
 type Lambda struct {
 	Token    *lexer.Token
 	Function Stmt

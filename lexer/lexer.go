@@ -287,6 +287,10 @@ func (l *Lexer) scanToken() error {
 		l.addToken(LEFT_BRACE, "{")
 	case '}':
 		l.addToken(RIGHT_BRACE, "}")
+	case '[':
+		l.addToken(LEFT_BRACKET, "[")
+	case ']':
+		l.addToken(RIGHT_BRACKET, "]")
 	case ',':
 		l.addToken(COMMA, ",")
 	case '.':
