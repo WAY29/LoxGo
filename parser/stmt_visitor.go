@@ -4,6 +4,7 @@ package parser
 
 type StmtVisitor interface {
 	VisitBlockStmt(stmt *Block) (interface{}, error)
+	VisitClassStmt(stmt *Class) (interface{}, error)
 	VisitExpressionStmt(stmt *Expression) (interface{}, error)
 	VisitFunctionStmt(stmt *Function) (interface{}, error)
 	VisitIfStmt(stmt *If) (interface{}, error)

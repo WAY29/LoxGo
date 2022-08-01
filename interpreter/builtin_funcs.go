@@ -64,7 +64,7 @@ func _array(interpreter *Interpreter, arguments []interface{}) (interface{}, err
 
 func _len(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
 	if array, ok := arguments[0].([]interface{}); !ok {
-		return nil, NewRuntimeError("Can't get length of %s[%T]", arguments[0], arguments[0])
+		return nil, NewRuntimeError(nil, "Can't get length of %s[%T]", arguments[0], arguments[0])
 	} else {
 		return len(array), nil
 	}

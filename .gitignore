@@ -21,3 +21,6 @@ gilbert.yaml
 .vscode/
 .VSCodeCounter/
 
+# auto build
+*doit*
+*dodo*

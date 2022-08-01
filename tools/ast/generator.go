@@ -28,9 +28,12 @@ func main() {
 		"Assign   : Name *lexer.Token, Value Expr",
 		"Binary   : Left Expr, Operator *lexer.Token, Right Expr",
 		"Call     : Callee Expr, Paren *lexer.Token, Arguments []Expr, ReturnValue interface{}",
+		"Get      : Instance Expr, Name *lexer.Token",
 		"Grouping : Expression Expr",
 		"Literal  : Value interface{}",
 		"Logical  : Left Expr, Operator *lexer.Token, Right Expr",
+		"Set      : Instance Expr, Name *lexer.Token, Value Expr",
+		"This     : Keyword *lexer.Token",
 		"Unary    : Operator *lexer.Token, Right Expr, Prefix bool",
 		"Variable : Name *lexer.Token",
 		"Array    : Token *lexer.Token, Elements []Expr",
@@ -40,6 +43,7 @@ func main() {
 
 	defineAst(out, "Stmt", []string{
 		"Block      : Statements []Stmt, Stop bool, Parent *Block",
+		"Class      : Name *lexer.Token, Methods []Stmt",
 		"Expression : Expr Expr",
 		"Function   : Name *lexer.Token, Params []*lexer.Token, Body Stmt",
 		"If         : Condition Expr, ThenBranch Stmt, ElseBranch Stmt",

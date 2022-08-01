@@ -10,9 +10,10 @@ type LoxCustomFunc struct { // Impl LoxCallable
 	parentEnvironment *Environment
 	declaration       *parser.Function
 	name              string
+	isInitializer     bool
 }
 
-func NewLoxCustomFunc(declaration *parser.Function, parentEnviron *Environment) *LoxCustomFunc {
+func NewLoxCustomFunc(declaration *parser.Function, parentEnviron *Environment, isInitializer bool) *LoxCustomFunc {
 	var funcName string
 	if declaration.Name != nil {
 		funcName = declaration.Name.GetValue()
@@ -21,6 +22,7 @@ func NewLoxCustomFunc(declaration *parser.Function, parentEnviron *Environment) 
 		parentEnvironment: parentEnviron,
 		declaration:       declaration,
 		name:              funcName,
+		isInitializer:     isInitializer,
 	}
 }
 
@@ -32,7 +34,7 @@ func (f *LoxCustomFunc) call(interpreter *Interpreter, arguments []interface{}) 
 
 	closure := NewEnvironment(environ)
 	if block, ok := f.declaration.Body.(*parser.Block); !ok {
-		return nil, NewRuntimeError("Func %s body invalid.", f.declaration.Name.GetValue())
+		return nil, NewRuntimeError(nil, "Func %s body invalid.", f.declaration.Name.GetValue())
 	} else {
 		result, err := interpreter.executeBlock(block, closure)
 		return result, err
@@ -49,4 +51,10 @@ func (f *LoxCustomFunc) String() string {
 
 func (f *LoxCustomFunc) Name() string {
 	return f.name
+}
+
+func (f *LoxCustomFunc) bind(instance *LoxInstance) *LoxCustomFunc {
+	environ := NewEnvironment(f.parentEnvironment)
+	environ.define("this", instance)
+	return NewLoxCustomFunc(f.declaration, environ, f.isInitializer)
 }

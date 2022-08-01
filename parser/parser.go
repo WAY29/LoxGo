@@ -2,9 +2,11 @@
 grammer:
 
 program        → declaration* EOF ;
-declaration    → funDecl
+declaration    → classDecl
+			   | funDecl
 			   | varDecl
                | statement ;
+classDecl      → "class" IDENTIFIER "{" function* "}" ;
 funDecl        → "fun" function ;
 function       → IDENTIFIER "(" parameters? ")" block ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
@@ -21,7 +23,7 @@ returnStmt     → "return" expression? ";"
 block          → "{" declaration* "}" ;
 
 expression     → assignment;
-assignment     → IDENTIFIER "=" assignment
+assignment     → ( call "." )? IDENTIFIER "=" assignment
 				 | ternary ;
 ternary        -> logic_or ("?": ternary ":" ternary)? ;
 logic_or       → logic_and ( "or" logic_and )* ;
@@ -32,9 +34,9 @@ term           → factor ( ( "-" | "+" ) factor )* ;
 factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ("++" | "--")? | call;
-call           → primary ( "(" arguments? ")" )* ;
+call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 arguments      → expression ( "," expression )* ;
-primary        → NUMBER | STRING | "true" | "false" | "nil"
+primary        → NUMBER | STRING | "true" | "false" | "this" | "nil"
                | IDENTIFIER ("[" expression "]")? | grouping | array | lambda;
 grouping       → "(" expression ")"
 array          → "[" expression ( "," expression )* "]";
@@ -178,13 +180,29 @@ func (p *Parser) declaration() (stmt Stmt) {
 		}
 	}()
 
-	if p.match(lexer.FUN) {
+	if p.match(lexer.CLASS) {
+		return p.classDeclaration()
+	} else if p.match(lexer.FUN) {
 		return p.function("function", true)
 	} else if p.match(lexer.VAR) {
 		return p.varDeclaration()
 	}
 
 	return p.statement()
+}
+
+func (p *Parser) classDeclaration() (stmt Stmt) {
+	name := p.consume(lexer.IDENTIFIER, "Except class name.")
+	p.consume(lexer.LEFT_BRACE, "Except '{' before class body.")
+
+	methods := make([]Stmt, 0)
+	for !p.check(lexer.RIGHT_BRACE) && !p.isAtEnd() {
+		methods = append(methods, p.function("method", true))
+	}
+
+	p.consume(lexer.RIGHT_BRACE, "Except '}' after class body.")
+
+	return NewClass(name, methods)
 }
 
 func (p *Parser) function(kind string, hasName bool) (stmt Stmt) {
@@ -207,11 +225,18 @@ func (p *Parser) function(kind string, hasName bool) (stmt Stmt) {
 			if !p.match(lexer.COMMA) {
 				break
 			}
+
 		}
 	}
 	p.consume(lexer.RIGHT_PAREN, "Expect ')' after parameters.")
 	p.consume(lexer.LEFT_BRACE, fmt.Sprintf("Excepted %s body.", kind))
 	body := p.block()
+	// 在类的构造函数末尾添加一个return;
+	if kind == "method" && funcName == "init" {
+		block := body.(*Block)
+		block.Statements = append(block.Statements, NewReturn(nil, nil))
+	}
+
 	return NewFunction(name, parameters, body)
 }
 
@@ -393,7 +418,10 @@ func (p *Parser) assignment() Expr {
 		if variable, ok := expr.(*Variable); ok {
 			name := variable.Name
 			return NewAssign(name, value)
+		} else if get, ok := expr.(*Get); ok {
+			return NewSet(get.Instance, get.Name, value)
 		}
+
 		panic(NewParseError(equals, "Invalid assignment target."))
 	}
 
@@ -491,21 +519,22 @@ func (p *Parser) unary() Expr {
 	if p.match(lexer.BANG, lexer.MINUS, lexer.PLUSPLUS, lexer.MINUSMINUS) {
 		return NewUnary(p.previous(), p.unary(), true)
 	} else {
-		expr := p.primary()
 		if p.match(lexer.PLUSPLUS, lexer.MINUSMINUS) {
-			return NewUnary(p.previous(), expr, false)
-		} else if p.match(lexer.LEFT_PAREN) {
-			return p.call(expr)
-		} else {
-			return expr
+			return NewUnary(p.previous(), p.unary(), false)
 		}
+		return p.call()
 	}
 }
 
-func (p *Parser) call(expr Expr) Expr {
+func (p *Parser) call() Expr {
+	expr := p.primary()
 	for {
-		expr = p.finishCall(expr)
-		if !p.match(lexer.LEFT_PAREN) {
+		if p.match(lexer.LEFT_PAREN) {
+			expr = p.finishCall(expr)
+		} else if p.match(lexer.DOT) {
+			name := p.consume(lexer.IDENTIFIER, "Expect property name after '.'.")
+			expr = NewGet(expr, name)
+		} else {
 			break
 		}
 	}
@@ -536,6 +565,8 @@ func (p *Parser) primary() Expr {
 		return NewLiteral(true)
 	} else if p.match(lexer.NIL) {
 		return NewLiteral(nil)
+	} else if p.match(lexer.THIS) {
+		return NewThis(p.previous())
 	} else if p.match(lexer.NUMBER, lexer.STRING) {
 		return NewLiteral(p.previous().GetLiteral())
 	} else if p.match(lexer.IDENTIFIER) {

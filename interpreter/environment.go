@@ -19,17 +19,17 @@ func NewEnvironment(enclosing *Environment) *Environment {
 	}
 }
 
-func (e *Environment) get(name string) interface{} {
-	if v, ok := e.values[name]; ok {
+func (e *Environment) get(name *lexer.Token) interface{} {
+	if v, ok := e.values[name.GetValue()]; ok {
 		if v.Value == nil {
-			panic(NewRuntimeError("Access empty variable '%s'.", name))
+			panic(NewRuntimeError(name, "Access empty variable '%s'.", name))
 		}
 		return v.Value
 	}
 	if e.enclosing != nil {
 		return e.enclosing.get(name)
 	}
-	panic(NewRuntimeError("Undefined variable '%s'.", name))
+	panic(NewRuntimeError(name, "Undefined variable '%s'.", name))
 }
 func (e *Environment) ancestor(distance int) *Environment {
 	var environ *Environment = e
@@ -43,11 +43,11 @@ func (e *Environment) getAt(distance int, name string) interface{} {
 	environ := e.ancestor(distance)
 	if v, ok := environ.values[name]; ok {
 		if v.Value == nil {
-			panic(NewRuntimeError("Access empty variable '%s'.", name))
+			panic(NewRuntimeError(nil, "Access empty variable '%s'.", name))
 		}
 		return v.Value
 	}
-	panic(NewRuntimeError("Undefined variable '%s'.", name))
+	panic(NewRuntimeError(nil, "Undefined variable '%s'.", name))
 }
 
 func (e *Environment) getWithBool(name string) (interface{}, bool) {

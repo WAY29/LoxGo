@@ -60,6 +60,18 @@ func (n *Call) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitCallExpr(n)
 }
 
+type Get struct {
+	Instance Expr
+	Name     *lexer.Token
+}
+
+func NewGet(instance Expr, name *lexer.Token) *Get {
+	return &Get{Instance: instance, Name: name}
+}
+func (n *Get) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitGetExpr(n)
+}
+
 type Grouping struct {
 	Expression Expr
 }
@@ -93,6 +105,30 @@ func NewLogical(left Expr, operator *lexer.Token, right Expr) *Logical {
 }
 func (n *Logical) Accept(v ExprVisitor) (interface{}, error) {
 	return v.VisitLogicalExpr(n)
+}
+
+type Set struct {
+	Instance Expr
+	Name     *lexer.Token
+	Value    Expr
+}
+
+func NewSet(instance Expr, name *lexer.Token, value Expr) *Set {
+	return &Set{Instance: instance, Name: name, Value: value}
+}
+func (n *Set) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitSetExpr(n)
+}
+
+type This struct {
+	Keyword *lexer.Token
+}
+
+func NewThis(keyword *lexer.Token) *This {
+	return &This{Keyword: keyword}
+}
+func (n *This) Accept(v ExprVisitor) (interface{}, error) {
+	return v.VisitThisExpr(n)
 }
 
 type Unary struct {

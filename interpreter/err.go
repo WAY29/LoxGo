@@ -2,20 +2,38 @@ package interpreter
 
 import (
 	"fmt"
+
+	"github.com/WAY29/LoxGo/lexer"
 )
 
 type RuntimeError struct {
-	Msg string
+	extraMsg string
+	token    *lexer.Token
 }
 
-func NewRuntimeError(format string, a ...interface{}) *RuntimeError {
+func NewRuntimeError(token *lexer.Token, format string, a ...interface{}) *RuntimeError {
 	return &RuntimeError{
-		Msg: "Runtime Error: " + fmt.Sprintf(format, a...),
+		extraMsg: "Runtime Error: " + fmt.Sprintf(format, a...),
 	}
 }
 
 func (e *RuntimeError) Error() string {
-	return e.Msg
+	var (
+		where string
+		token = e.token
+	)
+
+	if token == nil {
+		return fmt.Sprintf("Runtime Error: %s", e.extraMsg)
+	}
+
+	if token.GetType() == lexer.EOF {
+		where = " at end"
+	} else {
+		where = fmt.Sprintf("at '%s'", token.GetValue())
+	}
+
+	return fmt.Sprintf("Runtime Error in line %d: Error %s: %s", token.GetLine(), where, e.extraMsg)
 }
 
 type ConvertError struct {
@@ -36,6 +54,7 @@ func NewConvertError(value interface{}, typeString, msg string) *ConvertError {
 }
 
 func (e *ConvertError) Error() string {
+
 	if e.value == nil {
 		return fmt.Sprintf("Runtime error: Convert Error: %s.", e.extraMsg)
 	}

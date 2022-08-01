@@ -21,6 +21,18 @@ func (n *Block) Accept(v StmtVisitor) (interface{}, error) {
 	return v.VisitBlockStmt(n)
 }
 
+type Class struct {
+	Name    *lexer.Token
+	Methods []Stmt
+}
+
+func NewClass(name *lexer.Token, methods []Stmt) *Class {
+	return &Class{Name: name, Methods: methods}
+}
+func (n *Class) Accept(v StmtVisitor) (interface{}, error) {
+	return v.VisitClassStmt(n)
+}
+
 type Expression struct {
 	Expr Expr
 }

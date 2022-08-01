@@ -11,23 +11,34 @@ type Resolver struct { // impl ExprVisitor, StmtVisitor
 	interpreter *Interpreter
 	scopes      *list.List
 
-	inFunction bool
+	functionType FunctionType
+	classType    ClassType
 }
 
 func NewResolver(i *Interpreter) *Resolver {
 	return &Resolver{
-		interpreter: i,
-		scopes:      list.New(),
-		inFunction:  false,
+		interpreter:  i,
+		scopes:       list.New(),
+		functionType: FunctionTypeNone,
+		classType:    ClassTypeNone,
 	}
 }
 
-func (r *Resolver) newFunctionState() func() {
-	oldInFunction := r.inFunction
-	r.inFunction = true
+func (r *Resolver) newFunctionState(functionType FunctionType) func() {
+	oldFunctionType := r.functionType
+	r.functionType = functionType
 
 	return func() {
-		r.inFunction = oldInFunction
+		r.functionType = oldFunctionType
+	}
+}
+
+func (r *Resolver) newClassState(classType ClassType) func() {
+	oldClassType := r.classType
+	r.classType = classType
+
+	return func() {
+		r.classType = oldClassType
 	}
 }
 
@@ -58,9 +69,9 @@ func (r *Resolver) resolveLocal(expr parser.Expr, name *lexer.Token) {
 	}
 }
 
-func (r *Resolver) resolveFunction(function *parser.Function) {
+func (r *Resolver) resolveFunction(function *parser.Function, functionType FunctionType) {
 	defer r.newScope()()
-	defer r.newFunctionState()()
+	defer r.newFunctionState(functionType)()
 
 	for _, param := range function.Params {
 		r.decleare(param)
@@ -132,6 +143,11 @@ func (r *Resolver) VisitCallExpr(expr *parser.Call) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitGetExpr(expr *parser.Get) (interface{}, error) {
+	r.resolveExpr(expr.Instance)
+	return nil, nil
+}
+
 func (r *Resolver) VisitArrayExpr(expr *parser.Array) (interface{}, error) {
 	for _, element := range expr.Elements {
 		r.resolveExpr(element)
@@ -147,7 +163,7 @@ func (r *Resolver) VisitIndexExpr(expr *parser.Index) (interface{}, error) {
 		return nil, nil
 	}
 	if v, ok := scope.Value.(map[string]bool)[expr.Name.GetValue()]; ok && r.scopes.Len() > 0 && !v {
-		panic(NewRuntimeError("Can't read local variable in its own initializer."))
+		panic(parser.NewParseError(expr.Name, "Can't read local variable in its own initializer."))
 	}
 	r.resolveLocal(expr, expr.Name)
 	return nil, nil
@@ -168,6 +184,20 @@ func (r *Resolver) VisitLogicalExpr(expr *parser.Logical) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitSetExpr(expr *parser.Set) (interface{}, error) {
+	r.resolveExpr(expr.Instance)
+	r.resolveExpr(expr.Value)
+	return nil, nil
+}
+
+func (r *Resolver) VisitThisExpr(expr *parser.This) (interface{}, error) {
+	if r.classType == ClassTypeNone {
+		panic(parser.NewParseError(expr.Keyword, "Can't use 'this' outside of a class."))
+	}
+	r.resolveLocal(expr, expr.Keyword)
+	return nil, nil
+}
+
 func (r *Resolver) VisitUnaryExpr(expr *parser.Unary) (interface{}, error) {
 	r.resolveExpr(expr.Right)
 	return nil, nil
@@ -179,7 +209,7 @@ func (r *Resolver) VisitVariableExpr(expr *parser.Variable) (interface{}, error)
 		return nil, nil
 	}
 	if v, ok := scope.Value.(map[string]bool)[expr.Name.GetValue()]; ok && r.scopes.Len() > 0 && !v {
-		panic(NewRuntimeError("Can't read local variable in its own initializer."))
+		panic(parser.NewParseError(expr.Name, "Can't read local variable in its own initializer."))
 	}
 	r.resolveLocal(expr, expr.Name)
 	return nil, nil
@@ -198,6 +228,29 @@ func (r *Resolver) VisitBlockStmt(stmt *parser.Block) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitClassStmt(stmt *parser.Class) (interface{}, error) {
+	r.decleare(stmt.Name)
+	r.define(stmt.Name)
+	defer r.newScope()()
+	defer r.newClassState(ClassTypeClass)()
+
+	scopeMap := r.scopes.Back().Value.(map[string]bool)
+	scopeMap["this"] = true
+
+	for _, method := range stmt.Methods {
+		if methodFunction, ok := method.(*parser.Function); !ok {
+			return nil, parser.NewParseError(stmt.Name, "Invalid method")
+		} else {
+			functionType := FunctionTypeMethod
+			if methodFunction.Name.GetValue() == "init" {
+				functionType = FunctionTypeIinitalizer
+			}
+			r.resolveFunction(methodFunction, functionType)
+		}
+	}
+	return nil, nil
+}
+
 func (r *Resolver) VisitExpressionStmt(stmt *parser.Expression) (interface{}, error) {
 	r.resolveExpr(stmt.Expr)
 	return nil, nil
@@ -207,7 +260,7 @@ func (r *Resolver) VisitFunctionStmt(stmt *parser.Function) (interface{}, error)
 	r.decleare(stmt.Name)
 	r.define(stmt.Name)
 
-	r.resolveFunction(stmt)
+	r.resolveFunction(stmt, FunctionTypeFunction)
 	return nil, nil
 }
 
@@ -226,10 +279,13 @@ func (r *Resolver) VisitPrintStmt(stmt *parser.Print) (interface{}, error) {
 }
 
 func (r *Resolver) VisitReturnStmt(stmt *parser.Return) (interface{}, error) {
-	if !r.inFunction {
+	if r.functionType == FunctionTypeNone {
 		panic(parser.NewParseError(stmt.Keyword, "Can't return from top-level code."))
-	}
-	if stmt.Value != nil {
+	} else if stmt.Value != nil {
+		if r.functionType == FunctionTypeIinitalizer {
+			panic(parser.NewParseError(stmt.Keyword, "Can't return a value from an initializer."))
+		}
+
 		r.resolveExpr(stmt.Value)
 	}
 	return nil, nil
